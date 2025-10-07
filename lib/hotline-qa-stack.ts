@@ -756,13 +756,19 @@ export class HotlineQaStack extends cdk.Stack {
         ],
       };
 
-      // Configure CORS for all API resources
-      api.root.addResource("generate-url").addCorsPreflight(corsOptions);
-      api.root.addResource("get-results").addCorsPreflight(corsOptions);
-      api.root.addResource("get-data").addCorsPreflight(corsOptions);
-      api.root.addResource("execution-status").addCorsPreflight(corsOptions);
+      // Configure CORS for all existing API resources
+      const generateUrlResource = api.root.resourceForPath("generate-url");
+      const getResultsResource = api.root.resourceForPath("get-results");
+      const getDataResource = api.root.resourceForPath("get-data");
+      const executionStatusResource = api.root.resourceForPath("execution-status");
+      const fileIdResource = analysisResource.resourceForPath("{fileId}");
+
+      generateUrlResource.addCorsPreflight(corsOptions);
+      getResultsResource.addCorsPreflight(corsOptions);
+      getDataResource.addCorsPreflight(corsOptions);
+      executionStatusResource.addCorsPreflight(corsOptions);
       analysisResource.addCorsPreflight(corsOptions);
-      analysisResource.addResource("{fileId}").addCorsPreflight(corsOptions);
+      fileIdResource.addCorsPreflight(corsOptions);
       profilesResource.addCorsPreflight(corsOptions);
       specificProfileResource.addCorsPreflight(corsOptions);
     }
