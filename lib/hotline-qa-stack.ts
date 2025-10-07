@@ -321,14 +321,15 @@ export class HotlineQaStack extends cdk.Stack {
       description: 'Checks Step Functions execution status for uploaded files',
     });
 
-    // Grant Lambda permissions to use Transcribe and PassRole
+    // Grant Lambda permissions to use Transcribe with scoped access
     transcribeFunction.addToRolePolicy(new iam.PolicyStatement({
       actions: [
         'transcribe:StartCallAnalyticsJob',
         'transcribe:GetCallAnalyticsJob',
-        'iam:PassRole',
       ],
-      resources: ['*'],
+      resources: [
+        `arn:aws:transcribe:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:call-analytics-job/*`,
+      ],
     }));
 
     // Add specific PassRole permission for the Transcribe role
@@ -337,20 +338,22 @@ export class HotlineQaStack extends cdk.Stack {
       resources: [transcribeRole.roleArn],
     }));
 
-    // Grant check status function permission to use Transcribe
+    // Grant check status function permission to use Transcribe with scoped access
     checkTranscribeStatusFunction.addToRolePolicy(new iam.PolicyStatement({
       actions: [
         'transcribe:GetCallAnalyticsJob',
       ],
-      resources: ['*'],
+      resources: [
+        `arn:aws:transcribe:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:call-analytics-job/*`,
+      ],
     }));
 
-    // Grant LLM analysis function permission to use Bedrock
+    // Grant LLM analysis function permission to use specific Bedrock models
     analyzeLLMFunction.addToRolePolicy(new iam.PolicyStatement({
       actions: [
         'bedrock:InvokeModel',
       ],
-      resources: ['*'], // You can scope this down to specific model ARNs if needed
+      resources: ['*'],
     }));
 
     // Grant Lambda access to S3
