@@ -106,7 +106,23 @@ export class HotlineQaStack extends cdk.Stack {
           expiration: cdk.Duration.days(90), // Delete after 90 days total
         },
       ],
-      // S3 CORS will be configured after Amplify app is created to restrict to trusted domain only
+      cors: [
+        {
+          allowedMethods: [
+            s3.HttpMethods.GET,
+            s3.HttpMethods.PUT,
+            s3.HttpMethods.POST,
+          ],
+          allowedOrigins: ["https://*.amplifyapp.com"],
+          allowedHeaders: [
+            "Content-Type",
+            "Authorization",
+            "X-Amz-Date",
+            "X-Amz-Security-Token",
+          ],
+          maxAge: 3000,
+        },
+      ],
     });
 
     // Create DynamoDB table for counselor evaluations
@@ -599,7 +615,16 @@ export class HotlineQaStack extends cdk.Stack {
     const api = new apigateway.RestApi(this, "HotlineQaApi", {
       restApiName: "Boys Town Hotline QA API",
       description: "API for Boys Town Hotline QA frontend application",
-      // API Gateway CORS will be configured after Amplify app is created to restrict to trusted domain only
+      defaultCorsPreflightOptions: {
+        allowOrigins: ["https://*.amplifyapp.com"],
+        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allowHeaders: [
+          "Content-Type",
+          "Authorization",
+          "X-Amz-Date",
+          "X-Amz-Security-Token",
+        ],
+      },
     });
 
     // Create API integrations
@@ -720,57 +745,7 @@ export class HotlineQaStack extends cdk.Stack {
         stage: "PRODUCTION",
       });
 
-      // Configure secure CORS policies - restrict to only the deployed Amplify domain
-      const amplifyDomain = `https://main.${this.amplifyApp.appId}.amplifyapp.com`;
-
-      // Update S3 bucket CORS to only allow the Amplify domain
-      const cfnBucket = this.storageBucket.node.defaultChild as s3.CfnBucket;
-      cfnBucket.corsConfiguration = {
-        corsRules: [
-          {
-            allowedMethods: ["GET", "PUT", "POST"],
-            allowedOrigins: [amplifyDomain],
-            allowedHeaders: [
-              "Content-Type",
-              "Authorization",
-              "X-Amz-Date",
-              "X-Amz-Security-Token",
-            ],
-            maxAge: 3000,
-          },
-        ],
-      };
-
-      // Update API Gateway CORS to only allow the Amplify domain
-      const cfnApi = api.node.defaultChild as apigateway.CfnRestApi;
-
-      // Add CORS configuration to all API resources
-      const corsOptions = {
-        allowOrigins: [amplifyDomain],
-        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allowHeaders: [
-          "Content-Type",
-          "Authorization",
-          "X-Amz-Date",
-          "X-Amz-Security-Token",
-        ],
-      };
-
-      // Configure CORS for all existing API resources
-      const generateUrlResource = api.root.resourceForPath("generate-url");
-      const getResultsResource = api.root.resourceForPath("get-results");
-      const getDataResource = api.root.resourceForPath("get-data");
-      const executionStatusResource = api.root.resourceForPath("execution-status");
-      const fileIdResource = analysisResource.resourceForPath("{fileId}");
-
-      generateUrlResource.addCorsPreflight(corsOptions);
-      getResultsResource.addCorsPreflight(corsOptions);
-      getDataResource.addCorsPreflight(corsOptions);
-      executionStatusResource.addCorsPreflight(corsOptions);
-      analysisResource.addCorsPreflight(corsOptions);
-      fileIdResource.addCorsPreflight(corsOptions);
-      profilesResource.addCorsPreflight(corsOptions);
-      specificProfileResource.addCorsPreflight(corsOptions);
+      // Note: CORS is configured at the API Gateway level during creation to avoid circular dependencies
     }
 
     // If no frontend is deployed, disable CORS entirely for maximum security
