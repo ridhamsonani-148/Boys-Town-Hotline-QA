@@ -191,7 +191,16 @@ else
   
   # Attach specific managed policies with least privilege
   MANAGED_POLICIES=(
+    "arn:aws:iam::aws:policy/AmazonAPIGatewayAdministrator"
+    "arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess"
+    "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+    "arn:aws:iam::aws:policy/AWSCloudFormationFullAccess"
+    "arn:aws:iam::aws:policy/AWSCodeBuildDeveloperAccess"
+    "arn:aws:iam::aws:policy/AWSLambda_FullAccess"
+    "arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess"
     "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
+    "arn:aws:iam::aws:policy/IAMFullAccess"
+    "arn:aws:iam::aws:policy/SecretsManagerReadWrite"
   )
 
   for policy in "${MANAGED_POLICIES[@]}"; do
