@@ -106,23 +106,7 @@ export class HotlineQaStack extends cdk.Stack {
           expiration: cdk.Duration.days(90), // Delete after 90 days total
         },
       ],
-      cors: [
-        {
-          allowedMethods: [
-            s3.HttpMethods.GET,
-            s3.HttpMethods.PUT,
-            s3.HttpMethods.POST,
-          ],
-          allowedOrigins: ["https://*.amplifyapp.com"],
-          allowedHeaders: [
-            "Content-Type",
-            "Authorization",
-            "X-Amz-Date",
-            "X-Amz-Security-Token",
-          ],
-          maxAge: 3000,
-        },
-      ],
+      // S3 CORS will be configured after Amplify app is created with exact domain
     });
 
     // Create DynamoDB table for counselor evaluations
@@ -615,16 +599,7 @@ export class HotlineQaStack extends cdk.Stack {
     const api = new apigateway.RestApi(this, "HotlineQaApi", {
       restApiName: "Boys Town Hotline QA API",
       description: "API for Boys Town Hotline QA frontend application",
-      defaultCorsPreflightOptions: {
-        allowOrigins: ["https://*.amplifyapp.com"],
-        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allowHeaders: [
-          "Content-Type",
-          "Authorization",
-          "X-Amz-Date",
-          "X-Amz-Security-Token",
-        ],
-      },
+      // CORS will be configured after Amplify app is created with exact domain
     });
 
     // Create API integrations
@@ -743,9 +718,55 @@ export class HotlineQaStack extends cdk.Stack {
       this.amplifyApp.addBranch("main", {
         branchName: "main",
         stage: "PRODUCTION",
+        autoBuild: true, // Enable automatic builds on push
       });
 
-      // Note: CORS is configured at the API Gateway level during creation to avoid circular dependencies
+      // Configure CORS with exact Amplify domain (no wildcards allowed)
+      const amplifyDomain = `https://main.${this.amplifyApp.appId}.amplifyapp.com`;
+
+      // Update S3 bucket CORS with exact domain
+      const cfnBucket = this.storageBucket.node.defaultChild as s3.CfnBucket;
+      cfnBucket.corsConfiguration = {
+        corsRules: [
+          {
+            allowedMethods: ["GET", "PUT", "POST"],
+            allowedOrigins: [amplifyDomain],
+            allowedHeaders: [
+              "Content-Type",
+              "Authorization",
+              "X-Amz-Date",
+              "X-Amz-Security-Token",
+            ],
+            maxAge: 3000,
+          },
+        ],
+      };
+
+      // Update API Gateway CORS with exact domain
+      const corsOptions = {
+        allowOrigins: [amplifyDomain],
+        allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allowHeaders: [
+          "Content-Type",
+          "Authorization",
+          "X-Amz-Date",
+          "X-Amz-Security-Token",
+        ],
+      };
+
+      // Add CORS to all API resources
+      api.root.addResource("generate-url").addCorsPreflight(corsOptions);
+      api.root.addResource("get-results").addCorsPreflight(corsOptions);
+      api.root.addResource("get-data").addCorsPreflight(corsOptions);
+      api.root.addResource("execution-status").addCorsPreflight(corsOptions);
+      const analysisResource = api.root.addResource("analysis");
+      analysisResource.addCorsPreflight(corsOptions);
+      analysisResource.addResource("{fileId}").addCorsPreflight(corsOptions);
+      const profilesResource = api.root.addResource("profiles");
+      profilesResource.addCorsPreflight(corsOptions);
+      profilesResource
+        .addResource("{counselorId}")
+        .addCorsPreflight(corsOptions);
     }
 
     // If no frontend is deployed, disable CORS entirely for maximum security
