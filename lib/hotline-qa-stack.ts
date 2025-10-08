@@ -411,16 +411,15 @@ export class HotlineQaStack extends cdk.Stack {
       }
     );
 
-    // Grant Lambda permissions to use Transcribe with scoped access
+    // Grant Lambda permissions to use Transcribe with broader access for Call Analytics
     transcribeFunction.addToRolePolicy(
       new iam.PolicyStatement({
         actions: [
           "transcribe:StartCallAnalyticsJob",
           "transcribe:GetCallAnalyticsJob",
+          "transcribe:ListCallAnalyticsJobs",
         ],
-        resources: [
-          `arn:aws:transcribe:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:call-analytics-job/*`,
-        ],
+        resources: ["*"], // Call Analytics jobs require wildcard resource
       })
     );
 
@@ -432,13 +431,14 @@ export class HotlineQaStack extends cdk.Stack {
       })
     );
 
-    // Grant check status function permission to use Transcribe with scoped access
+    // Grant check status function permission to use Transcribe with broader access
     checkTranscribeStatusFunction.addToRolePolicy(
       new iam.PolicyStatement({
-        actions: ["transcribe:GetCallAnalyticsJob"],
-        resources: [
-          `arn:aws:transcribe:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:call-analytics-job/*`,
+        actions: [
+          "transcribe:GetCallAnalyticsJob",
+          "transcribe:ListCallAnalyticsJobs",
         ],
+        resources: ["*"], // Call Analytics jobs require wildcard resource
       })
     );
 
@@ -847,6 +847,17 @@ export class HotlineQaStack extends cdk.Stack {
       value: getAnalysisResultsFunction.functionName,
       description:
         "Name of the Lambda function that gets specific analysis results",
+    });
+
+    // Output IAM role ARNs for debugging
+    new cdk.CfnOutput(this, "TranscribeFunctionRoleArn", {
+      value: transcribeFunction.role?.roleArn || "No role found",
+      description: "IAM Role ARN for the Transcribe Lambda function",
+    });
+
+    new cdk.CfnOutput(this, "TranscribeServiceRoleArn", {
+      value: transcribeRole.roleArn,
+      description: "IAM Role ARN for the Transcribe service",
     });
 
     new cdk.CfnOutput(this, "CheckExecutionStatusFunctionName", {
